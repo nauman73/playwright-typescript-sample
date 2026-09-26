@@ -1,11 +1,13 @@
 import { test as base, expect, type APIRequestContext } from '@playwright/test';
 import type { Db } from '../../src/db/client';
+import type { Property } from '../../src/db/schema';
 import { FROZEN_NOW } from '../support/constants';
 import { sessionToken, withClerkSession, type ClerkSession } from './clerk';
+import { createProperty, deleteProperty, newProspect, type Prospect } from './data';
 import { withDb } from './db';
 
 type WorkerFixtures = { db: Db; clerkSession: ClerkSession };
-type TestFixtures = { api: APIRequestContext };
+type TestFixtures = { api: APIRequestContext; property: Property; prospect: Prospect };
 
 export const test = base.extend<TestFixtures, WorkerFixtures>({
   db: [async ({}, use) => withDb(use), { scope: 'worker' }],
@@ -19,6 +21,13 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     await use(ctx);
     await ctx.dispose();
   },
+  // Each test gets its own property, so parallel tests never book the same slots.
+  property: async ({ db }, use) => {
+    const property = await createProperty(db);
+    await use(property);
+    await deleteProperty(db, property.id);
+  },
+  prospect: async ({}, use) => use(newProspect()),
 });
 
 export { expect };
