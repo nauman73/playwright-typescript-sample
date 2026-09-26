@@ -55,6 +55,7 @@ TEST-PLAN.md                       risk-ranked test plan, manual checks, explora
 .gitignore
 .node-version                      Node major version for local runs and CI
 .github/workflows/e2e.yml          CI workflow
+.github/ISSUE_TEMPLATE/bug_report.md  bug report template for GitHub issues
 docker-compose.yml                 PostgreSQL and Mailpit
 drizzle.config.ts                  Drizzle Kit configuration
 drizzle/                           SQL migrations
