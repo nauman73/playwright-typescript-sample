@@ -495,5 +495,5 @@ The workflow reads six repository secrets:
 Add them under **Settings → Secrets and variables → Actions**. Without the two Twilio secrets, the
 `sms-contract` tests are skipped and the run can still pass. The four Clerk secrets are required.
 
-Pull requests from forks do not receive secrets, so their CI runs fail in global setup, which
-needs the Clerk keys and the test user.
+Pull requests from forks do not receive secrets, so their CI runs fail, because the build and
+global setup both need the Clerk keys.
