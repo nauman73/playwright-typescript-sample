@@ -14,6 +14,8 @@ test('booking, rescheduling and cancelling each send one email and one SMS', asy
 
   await api.delete(`/api/showings/${booked.id}`);
   await mailbox.waitFor(prospect.email, `Showing cancelled: ${property.address}`);
+  // Each action sends exactly one email, so a duplicate send fails this check.
+  await expect.poll(async () => (await mailbox.listFor(prospect.email)).length).toBe(3);
 
   const sms = await smsOutbox.forProperty(property.id);
   expect(sms.map((m) => m.toNumber)).toEqual([prospect.phone, prospect.phone, prospect.phone]);

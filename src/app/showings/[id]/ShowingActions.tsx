@@ -13,31 +13,41 @@ export function ShowingActions({ id, options }: { id: string; options: { value: 
     setBusy(true);
     setError(null);
     const startsAt = new FormData(e.currentTarget).get('startsAt');
-    const res = await fetch(`/api/showings/${id}`, {
-      method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ startsAt }),
-    });
-    if (res.ok) {
-      router.replace(`/showings/${id}?done=rescheduled`);
+    try {
+      const res = await fetch(`/api/showings/${id}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ startsAt }),
+      });
+      if (res.ok) {
+        router.replace(`/showings/${id}?done=rescheduled`);
+        return;
+      }
+      const body = await res.json().catch(() => ({}));
+      setError(body.code === 'SLOT_TAKEN' ? 'That slot has just been taken.' : 'Rescheduling failed.');
+    } catch {
+      // The request did not reach the server, for example because the network is down.
+      setError('Rescheduling failed.');
+    } finally {
       setBusy(false);
-      return;
     }
-    const body = await res.json().catch(() => ({}));
-    setError(body.code === 'SLOT_TAKEN' ? 'That slot has just been taken.' : 'Rescheduling failed.');
-    setBusy(false);
   }
 
   async function cancel() {
     setBusy(true);
     setError(null);
-    const res = await fetch(`/api/showings/${id}`, { method: 'DELETE' });
-    if (res.ok) {
-      router.push('/showings?done=cancelled');
-      return;
+    try {
+      const res = await fetch(`/api/showings/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        router.push('/showings?done=cancelled');
+        return;
+      }
+      setError('Cancelling failed.');
+    } catch {
+      setError('Cancelling failed.');
+    } finally {
+      setBusy(false);
     }
-    setError('Cancelling failed.');
-    setBusy(false);
   }
 
   return (

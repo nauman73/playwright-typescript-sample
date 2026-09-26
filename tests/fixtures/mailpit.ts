@@ -19,6 +19,11 @@ export class Mailbox {
     return (await res.json()) as { Subject: string; Text: string };
   }
 
+  /** Lists the subjects of the messages that have reached this address. */
+  async listFor(to: string): Promise<string[]> {
+    return (await this.search(to)).map((m) => m.Subject);
+  }
+
   async deleteFor(to: string) {
     await fetch(`${base()}/api/v1/search?query=${encodeURIComponent(`to:"${to}"`)}`, { method: 'DELETE' });
   }

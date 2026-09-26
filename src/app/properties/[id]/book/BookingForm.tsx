@@ -10,6 +10,7 @@ const MESSAGES: Record<string, string> = {
   OUTSIDE_BUSINESS_HOURS: 'That time is outside business hours.',
   VALIDATION: 'Check the name, email and phone number.',
 };
+const GENERAL_ERROR = 'The booking failed. Try again.';
 
 export function BookingForm({ propertyId, startsAt }: { propertyId: string; startsAt: string }) {
   const router = useRouter();
@@ -21,24 +22,30 @@ export function BookingForm({ propertyId, startsAt }: { propertyId: string; star
     setBusy(true);
     setError(null);
     const form = new FormData(e.currentTarget);
-    const res = await fetch('/api/showings', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        propertyId,
-        startsAt,
-        prospectName: form.get('name'),
-        prospectEmail: form.get('email'),
-        prospectPhone: form.get('phone'),
-      }),
-    });
-    const body = await res.json().catch(() => ({}));
-    if (res.status === 201) {
-      router.push(`/showings/${body.id}?done=booked`);
-      return;
+    try {
+      const res = await fetch('/api/showings', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          propertyId,
+          startsAt,
+          prospectName: form.get('name'),
+          prospectEmail: form.get('email'),
+          prospectPhone: form.get('phone'),
+        }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (res.status === 201) {
+        router.push(`/showings/${body.id}?done=booked`);
+        return;
+      }
+      setError(MESSAGES[body.code] ?? GENERAL_ERROR);
+    } catch {
+      // The request did not reach the server, for example because the network is down.
+      setError(GENERAL_ERROR);
+    } finally {
+      setBusy(false);
     }
-    setError(MESSAGES[body.code] ?? 'The booking failed. Try again.');
-    setBusy(false);
   }
 
   return (
