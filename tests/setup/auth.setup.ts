@@ -14,7 +14,9 @@ setup('target is not production and accepts the test clock', async ({ request })
 
 setup('sign in the staff user and save the browser state', async ({ page }) => {
   await page.goto('/sign-in');
-  await clerk.signIn({ page, emailAddress: process.env.E2E_CLERK_USER_EMAIL! });
+  const email = process.env.E2E_CLERK_USER_EMAIL;
+  expect(email, 'Set E2E_CLERK_USER_EMAIL in .env').toBeTruthy();
+  await clerk.signIn({ page, emailAddress: email! });
   await page.goto('/properties');
   await expect(page.getByRole('heading', { name: 'Properties' })).toBeVisible();
   await page.context().storageState({ path: STAFF_STATE });
