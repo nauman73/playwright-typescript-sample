@@ -55,7 +55,7 @@ TEST-PLAN.md                       risk-ranked test plan, manual checks, explora
 .gitignore
 .node-version                      Node major version for local runs and CI
 .github/workflows/e2e.yml          CI workflow
-.github/ISSUE_TEMPLATE/bug_report.md  bug report template for GitHub issues
+.github/ISSUE_TEMPLATE/            bug_report.md, the bug report template for GitHub issues
 docker-compose.yml                 PostgreSQL and Mailpit
 drizzle.config.ts                  Drizzle Kit configuration
 drizzle/                           SQL migrations
@@ -68,14 +68,14 @@ src/
   proxy.ts                         Clerk middleware: sign-in required everywhere except /sign-in and /api/health
   instrumentation.ts               refuses to start with the test clock in production
   app/                             pages and API routes
-  db/schema.ts, client.ts, seed.ts tables, connection pool, demo data
+  db/                              schema.ts (tables), client.ts (connection pool), seed.ts (demo data)
   lib/config.ts                    typed environment
   lib/clock.ts                     server clock and the x-test-now header
   lib/request-now.ts               the current time for a page request
   lib/booking-rules.ts             pure booking rules and slot listing
   lib/format.ts                    date and time display
   lib/or-not-found.ts              turns a 404 AppError into the not-found page
-  server/errors.ts, http.ts, auth.ts, properties.ts, showings.ts   service layer
+  server/                          service layer: errors.ts, http.ts, auth.ts, properties.ts, showings.ts
   notifications/email.ts           SMTP email through Nodemailer
   notifications/notify.ts          sends the email and SMS for a booking change
   notifications/sms/               SmsSender interface, recording and Twilio adapters
@@ -218,7 +218,9 @@ pnpm test:e2e
 
 Playwright starts the app with `pnpm dev` and `ALLOW_TEST_CLOCK=true`, or reuses a server that is
 already running on port 3000. A server that is already running must also have been started with
-`ALLOW_TEST_CLOCK=true` (it is set in `.env.example`), or the setup project stops the run.
+`ALLOW_TEST_CLOCK=true` (it is set in `.env.example`). Otherwise the setup project fails, and
+Playwright does not run the projects that depend on it (`api`, `desktop-chrome` and
+`mobile-chrome`). `sms-contract` does not call the app and still runs.
 
 The suite has five projects:
 
@@ -279,10 +281,12 @@ screenshot or trace.
 - **Global setup** ([tests/global-setup.ts](tests/global-setup.ts)) calls `clerkSetup()` from
   `@clerk/testing/playwright`. It obtains a Clerk testing token, which lets automated browsers
   pass Clerk's bot detection. It then creates one Clerk session for the test user through Clerk's
-  Backend API and revokes it after the run.
+  Backend API. Global teardown revokes that session and the session that the setup project saved
+  in `playwright/.auth/staff.json`.
 - **The setup project** ([tests/setup/auth.setup.ts](tests/setup/auth.setup.ts)) first calls
-  `GET /api/health` and stops the run if the target reports `appEnv: production` or does not
-  accept the test clock. It then signs the test user in with `clerk.signIn()` and saves the
+  `GET /api/health` and fails if the target reports `appEnv: production` or does not accept the
+  test clock. The projects that depend on it (`api`, `desktop-chrome` and `mobile-chrome`) then do
+  not run. When the check passes, it signs the test user in with `clerk.signIn()` and saves the
   browser state to `playwright/.auth/staff.json`.
 - **Saved state.** The `desktop-chrome` and `mobile-chrome` projects load that file, so UI tests
   start signed in. One UI test in [tests/ui/auth.spec.ts](tests/ui/auth.spec.ts) signs in through
@@ -424,10 +428,11 @@ Playwright loads `.env.local` before `.env`, so these values can go in a `.env.l
 (gitignored) while `.env` keeps the local ones.
 
 The target must run with `ALLOW_TEST_CLOCK=true` and must not run with `APP_ENV=production`. The
-setup project calls `GET /api/health` before any test runs and stops the run when the target
-reports `appEnv: production` or `testClock` is not `true`. The suite is meant for local, CI and
-staging environments only. CI does not run against a deployed environment, because this sample
-has none.
+setup project calls `GET /api/health` before any test runs and fails when the target reports
+`appEnv: production` or `testClock` is not `true`. Playwright then does not run the projects that
+depend on it (`api`, `desktop-chrome` and `mobile-chrome`). `sms-contract` does not call the app
+and still runs. The suite is meant for local, CI and staging environments only. CI does not run
+against a deployed environment, because this sample has none.
 
 ## 11. Email and SMS providers
 
@@ -469,7 +474,8 @@ send and a Twilio error without a real phone number. The UI and API tests keep
 ## 12. CI
 
 [.github/workflows/e2e.yml](.github/workflows/e2e.yml) runs one job on every pull request and on
-every push to `main`. A newer run on the same branch cancels the older one. The job:
+every push to `main`. A newer run for the same branch or pull request cancels the older one. The
+job:
 
 1. Starts PostgreSQL (`postgres:16`) and Mailpit (`axllent/mailpit:v1.31`) as job services.
 2. Installs pnpm (the version in `packageManager` in [package.json](package.json)) and Node (the
@@ -481,6 +487,11 @@ every push to `main`. A newer run on the same branch cancels the older one. The 
    app with `pnpm start`, uses two workers and retries a failed test twice.
 6. Uploads the `playwright-report` artifact on every run that is not cancelled, and the
    `test-results` artifact when the run fails. Both are kept for 14 days.
+
+The artifacts of a public repository can be downloaded by anyone who is signed in to GitHub. For
+that reason the tests in [tests/ui/auth.spec.ts](tests/ui/auth.spec.ts), which sign in through the
+form, do not record traces, and global teardown revokes the run's Clerk sessions at the end of the
+run.
 
 The workflow reads six repository secrets:
 

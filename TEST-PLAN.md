@@ -91,11 +91,12 @@ America/New_York, which the server reads from the `x-test-now` header
 **Notification sent to the wrong person or not at all.**
 [tests/api/notifications.spec.ts](tests/api/notifications.spec.ts) books, reschedules and cancels
 one showing. It waits for each of the three emails in Mailpit, searched by the prospect's address,
-and checks that the `sms_outbox` table holds three messages addressed to the prospect's phone
-number, with the expected text. The UI tests in [tests/ui/booking.spec.ts](tests/ui/booking.spec.ts)
-and [tests/ui/reschedule-cancel.spec.ts](tests/ui/reschedule-cancel.spec.ts) check the email and
-the SMS for the same actions made through the pages. Each test uses its own prospect, so a message
-sent to another address does not satisfy the check.
+checks that the address holds exactly three messages, and checks that the `sms_outbox` table holds
+three messages addressed to the prospect's phone number, with the expected text. The UI tests in
+[tests/ui/booking.spec.ts](tests/ui/booking.spec.ts) and
+[tests/ui/reschedule-cancel.spec.ts](tests/ui/reschedule-cancel.spec.ts) check the email and the SMS
+for the same actions made through the pages. Each test uses its own prospect, so a message sent to
+another address does not satisfy the check.
 
 **Sign-in and access to protected pages and API.**
 [tests/ui/auth.spec.ts](tests/ui/auth.spec.ts) checks that a signed-out visitor to `/properties` is
@@ -114,12 +115,14 @@ showing through the pages.
 **Test clock enabled in production.**
 [src/instrumentation.ts](src/instrumentation.ts) stops the server at startup when
 `APP_ENV=production` and `ALLOW_TEST_CLOCK=true` are both set. Before any test runs, the setup
-project in [tests/setup/auth.setup.ts](tests/setup/auth.setup.ts) calls `GET /api/health` and stops
-the run if the target reports `appEnv: production` or does not accept the test clock.
+project in [tests/setup/auth.setup.ts](tests/setup/auth.setup.ts) calls `GET /api/health` and fails
+if the target reports `appEnv: production` or does not accept the test clock. Playwright then does
+not run the projects that depend on it (`api`, `desktop-chrome` and `mobile-chrome`).
+`sms-contract` does not call the app and still runs.
 
 **Layout and touch use on phones.**
 Every UI test runs twice, in the `desktop-chrome` project and in the `mobile-chrome` project, which
-emulates a Pixel 7 ([playwright.config.ts](playwright.config.ts)). Emulation checks the viewport
+emulates a Pixel 7 ([playwright.config.ts](playwright.config.ts)). Emulation sets the viewport
 size, touch input and the mobile user agent. It does not replace a check on real phones, which
 stays manual (section 3).
 
@@ -157,7 +160,7 @@ Some checks need human judgement or hardware that the suite does not have:
   by hand on an iPhone.
 - **Visual judgement.** The suite checks that elements exist and hold the right text. It does not
   judge whether a page looks correct, is readable or is laid out well.
-- **Email rendering in real email clients.** Mailpit shows the message that was sent. How that message
+- **Email rendering in real mail apps.** Mailpit shows the message that was sent. How that message
   looks in Gmail, Outlook or a phone's mail app is checked by hand.
 - **First-time exploratory testing of new features.** A new feature is explored by hand before its
   automated tests are written, so that the tests cover the behaviour that matters. Section 4 lists
@@ -215,9 +218,11 @@ questions, and files a bug for each problem (section 6).
 | Production | Never. | The suite writes test data, reads the database directly and needs the test clock. |
 
 Two guards keep the suite away from production. The server refuses to start when `APP_ENV` is
-`production` and `ALLOW_TEST_CLOCK` is `true`, and the setup project stops the run when
-`GET /api/health` reports `appEnv: production` (section 2). Section 10 of the [README](README.md)
-lists the variables for a run against staging.
+`production` and `ALLOW_TEST_CLOCK` is `true`, and the setup project fails when
+`GET /api/health` reports `appEnv: production` (section 2). A failed setup project stops the
+projects that depend on it (`api`, `desktop-chrome` and `mobile-chrome`); `sms-contract` does not
+call the app and still runs. Section 10 of the [README](README.md) lists the variables for a run
+against staging.
 
 ## 6. Reporting bugs
 
