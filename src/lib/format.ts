@@ -1,5 +1,5 @@
 // ICU puts a narrow no-break space (U+202F) before AM/PM. Normalise it so text matches everywhere.
-const clean = (s: string) => s.replace(/ /g, ' ');
+const clean = (s: string) => s.replace(/\u202f/g, ' ');
 
 export const formatSlot = (d: Date, tz: string) =>
   clean(new Intl.DateTimeFormat('en-US', { dateStyle: 'full', timeStyle: 'short', timeZone: tz }).format(d));
