@@ -2,7 +2,8 @@ import { z } from 'zod';
 import { AppError } from '@/server/errors';
 import { config } from './config';
 
-const isoDateTime = z.iso.datetime({ offset: true });
+/** An ISO 8601 date-time with a time zone designator (Z or an offset), such as 2031-02-03T15:00:00Z. */
+export const isoDateTime = z.iso.datetime({ offset: true });
 
 /**
  * The current time. With ALLOW_TEST_CLOCK=true, the x-test-now header overrides it. A header that

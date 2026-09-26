@@ -66,6 +66,22 @@ test('a booking with invalid fields returns 400 VALIDATION', async ({ api, prope
   expect((await res.json()).code).toBe('VALIDATION');
 });
 
+test('a booking body with missing fields returns 400 VALIDATION', async ({ api, property }) => {
+  const res = await api.post('/api/showings', { data: { propertyId: property.id } });
+  expect(res.status()).toBe(400);
+  expect((await res.json()).code).toBe('VALIDATION');
+});
+
+test('a booking body that is not JSON returns 400 VALIDATION', async ({ api }) => {
+  // Playwright encodes a string as JSON when the content type is JSON, so the raw text goes in a Buffer.
+  const res = await api.post('/api/showings', {
+    data: Buffer.from('not json'),
+    headers: { 'content-type': 'application/json' },
+  });
+  expect(res.status()).toBe(400);
+  expect(await res.json()).toEqual({ code: 'VALIDATION', message: 'Body must be JSON' });
+});
+
 test('an unknown or non-UUID property id returns 404', async ({ api, prospect }) => {
   for (const id of ['00000000-0000-4000-8000-000000000000', 'not-a-uuid']) {
     const res = await api.post('/api/showings', { data: { propertyId: id, startsAt: WED_11_00, ...asBody(prospect) } });

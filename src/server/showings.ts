@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { db } from '@/db/client';
 import { showings, type Showing } from '@/db/schema';
 import { checkSlot } from '@/lib/booking-rules';
+import { isoDateTime } from '@/lib/clock';
 import { config } from '@/lib/config';
 import { AppError } from './errors';
 import { getProperty } from './properties';
@@ -9,7 +10,7 @@ import { getProperty } from './properties';
 // propertyId is a plain string here so that a non-UUID id reaches getProperty and gives 404.
 export const bookingInput = z.object({
   propertyId: z.string(),
-  startsAt: z.iso.datetime({ offset: true }),
+  startsAt: isoDateTime,
   prospectName: z.string().trim().min(1).max(200),
   prospectEmail: z.string().trim().pipe(z.email()),
   prospectPhone: z.string().trim().regex(/^\+?[0-9 ()-]{7,20}$/),

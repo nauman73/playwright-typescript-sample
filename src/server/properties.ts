@@ -17,19 +17,30 @@ export async function getProperty(id: string): Promise<Property> {
   return row;
 }
 
+// `from` must be a real calendar date, and `days` a whole number from 1 to 31.
+const daysQuery = z.object({
+  from: z.iso.date().optional(),
+  days: z.coerce.number().int().min(1).max(31).default(14),
+});
+
 /**
  * The bookable days for a property, starting at `from` (YYYY-MM-DD in the business time zone,
- * default today). The caller validates `from` and `days`; `days` is also kept between 1 and 31.
+ * default today) and covering `days` days (default 14). Both accept raw query string values. An
+ * invalid value gives 400 VALIDATION.
  */
-export async function getDays(propertyId: string, now: Date, from?: string, days = 14): Promise<Day[]> {
+export async function getDays(propertyId: string, now: Date, from?: string, days?: string | number): Promise<Day[]> {
+  const query = daysQuery.safeParse({ from, days });
+  if (!query.success) {
+    throw new AppError('VALIDATION', 400, query.error.issues.map((i) => i.path.join('.')).join(', '));
+  }
   await getProperty(propertyId);
   const booked = await db
     .select({ startsAt: showings.startsAt })
     .from(showings)
     .where(and(eq(showings.propertyId, propertyId), eq(showings.status, 'booked')));
   return listDays({
-    from: from ?? todayIn(now, config.timeZone),
-    days: Math.min(Math.max(days, 1), 31),
+    from: query.data.from ?? todayIn(now, config.timeZone),
+    days: query.data.days,
     now,
     tz: config.timeZone,
     taken: new Set(booked.map((b) => b.startsAt.getTime())),
