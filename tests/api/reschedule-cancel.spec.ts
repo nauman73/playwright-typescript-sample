@@ -28,6 +28,20 @@ test('rescheduling a showing that has started returns 422 SHOWING_STARTED', asyn
   expect((await res.json()).code).toBe('SHOWING_STARTED');
 });
 
+test('cancelling a showing that has started returns 422 SHOWING_STARTED', async ({ api, db, property }) => {
+  const showing = await insertShowing(db, { propertyId: property.id, startsAt: new Date(MON_09_00) });
+  const res = await api.delete(`/api/showings/${showing.id}`);
+  expect(res.status()).toBe(422);
+  expect((await res.json()).code).toBe('SHOWING_STARTED');
+});
+
+test('rescheduling with an invalid startsAt returns 400 VALIDATION', async ({ api, db, property }) => {
+  const showing = await insertShowing(db, { propertyId: property.id, startsAt: new Date(WED_11_00) });
+  const res = await api.patch(`/api/showings/${showing.id}`, { data: { startsAt: 'next tuesday' } });
+  expect(res.status()).toBe(400);
+  expect((await res.json()).code).toBe('VALIDATION');
+});
+
 test('a cancelled showing frees its slot for a new booking', async ({ api, db, property, prospect }) => {
   const showing = await insertShowing(db, { propertyId: property.id, startsAt: new Date(WED_11_00) });
   expect((await api.delete(`/api/showings/${showing.id}`)).status()).toBe(200);
@@ -43,10 +57,19 @@ test('cancelling or rescheduling a cancelled showing returns 409 ALREADY_CANCELL
   expect((await again.json()).code).toBe('ALREADY_CANCELLED');
   const move = await api.patch(`/api/showings/${showing.id}`, { data: { startsAt: WED_11_30 } });
   expect(move.status()).toBe(409);
+  expect((await move.json()).code).toBe('ALREADY_CANCELLED');
 });
 
 test('an unknown or non-UUID showing id returns 404', async ({ api }) => {
   for (const id of ['00000000-0000-4000-8000-000000000000', 'not-a-uuid']) {
     expect((await api.delete(`/api/showings/${id}`)).status()).toBe(404);
+  }
+});
+
+test('rescheduling an unknown or non-UUID showing id returns 404', async ({ api }) => {
+  for (const id of ['00000000-0000-4000-8000-000000000000', 'not-a-uuid']) {
+    const res = await api.patch(`/api/showings/${id}`, { data: { startsAt: WED_11_30 } });
+    expect(res.status()).toBe(404);
+    expect((await res.json()).code).toBe('NOT_FOUND');
   }
 });
