@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 import { config } from 'dotenv';
 import { STAFF_STATE } from './tests/support/constants';
 
-// Load the same files, in the same order, that Next.js reads. The runner loads them once here.
+// Load .env.local, then .env, as Next.js does.
 config({ path: ['.env.local', '.env'], quiet: true });
 
 // GitHub runners use UTC. Setting it here gives the same time zone locally, for the test
