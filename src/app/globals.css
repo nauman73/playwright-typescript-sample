@@ -14,6 +14,22 @@ body {
   background: #ffffff;
 }
 
+/* The header shows the main navigation on the left and the user menu on the right. */
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.site-header nav {
+  display: flex;
+  gap: 1rem;
+}
+
 main {
   max-width: 60rem;
   margin: 0 auto;
