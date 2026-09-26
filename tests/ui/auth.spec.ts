@@ -2,6 +2,10 @@ import { setupClerkTestingToken } from '@clerk/testing/playwright';
 import { expect, test } from '../fixtures';
 import { SignInPage } from '../pages/SignInPage';
 
+// Tracing is off in this file because the form sign-in types the test user's password into the page.
+// Playwright accepts the trace option only at the top level of a file, not inside a describe group.
+test.use({ trace: 'off' });
+
 test.describe('signed out', () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
