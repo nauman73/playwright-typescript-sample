@@ -5,9 +5,10 @@ import { FROZEN_NOW } from '../support/constants';
 import { sessionToken, withClerkSession, type ClerkSession } from './clerk';
 import { createProperty, deleteProperty, newProspect, type Prospect } from './data';
 import { withDb } from './db';
+import { freezeTime } from './time';
 
 type WorkerFixtures = { db: Db; clerkSession: ClerkSession };
-type TestFixtures = { api: APIRequestContext; property: Property; prospect: Prospect };
+type TestFixtures = { api: APIRequestContext; property: Property; prospect: Prospect; frozenTime: Date };
 
 export const test = base.extend<TestFixtures, WorkerFixtures>({
   db: [async ({}, use) => withDb(use), { scope: 'worker' }],
@@ -28,6 +29,14 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     await deleteProperty(db, property.id);
   },
   prospect: async ({}, use) => use(newProspect()),
+  frozenTime: async ({}, use) => use(FROZEN_NOW),
+  // Every test that uses `page` sends the fixed test time to the app with each request.
+  // The freeze is applied by overriding `page` rather than by an auto fixture, because an auto
+  // fixture that depends on `page` would open a browser page for every API test as well.
+  page: async ({ page, baseURL, frozenTime }, use) => {
+    await freezeTime(page, baseURL!, frozenTime);
+    await use(page);
+  },
 });
 
 export { expect };
