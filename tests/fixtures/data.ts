@@ -27,6 +27,15 @@ export async function createProperty(db: Db): Promise<Property> {
   return row!;
 }
 
+/** The distinct prospect email addresses of a property's showings. */
+export async function prospectEmails(db: Db, propertyId: string): Promise<string[]> {
+  const rows = await db
+    .selectDistinct({ email: showings.prospectEmail })
+    .from(showings)
+    .where(eq(showings.propertyId, propertyId));
+  return rows.map((r) => r.email);
+}
+
 /** Deletes a property. The foreign keys cascade to its showings and their SMS outbox rows. */
 export async function deleteProperty(db: Db, id: string) {
   await db.delete(properties).where(eq(properties.id, id));

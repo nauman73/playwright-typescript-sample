@@ -5,6 +5,7 @@ import { properties, showings, type Showing } from '@/db/schema';
 import { checkSlot } from '@/lib/booking-rules';
 import { isoDateTime } from '@/lib/clock';
 import { config } from '@/lib/config';
+import { notifyProspect } from '@/notifications/notify';
 import { AppError } from './errors';
 import { getProperty } from './properties';
 
@@ -56,8 +57,9 @@ export async function bookShowing(input: unknown, userId: string, now: Date): Pr
   await getProperty(v.propertyId);
   const startsAt = new Date(v.startsAt);
   assertSlot(startsAt, now);
+  let row: Showing | undefined;
   try {
-    const [row] = await db
+    [row] = await db
       .insert(showings)
       .values({
         propertyId: v.propertyId,
@@ -68,12 +70,13 @@ export async function bookShowing(input: unknown, userId: string, now: Date): Pr
         createdBy: userId,
       })
       .returning();
-    return row!;
   } catch (error) {
     // The partial unique index on booked showings rejects a second booking for the same slot.
     if (isUniqueViolation(error)) throw new AppError('SLOT_TAKEN', 409, 'That slot has just been taken');
     throw error;
   }
+  await notifyProspect('booked', row!);
+  return row!;
 }
 
 /** One showing. An unknown id and an id that is not a UUID both give 404, never a database error. */
@@ -101,19 +104,21 @@ export async function rescheduleShowing(id: string, input: unknown, now: Date): 
   assertChangeable(current, now);
   const startsAt = new Date(parsed.data.startsAt);
   assertSlot(startsAt, now);
+  let row: Showing | undefined;
   try {
     // The status condition makes the update fail if the showing was cancelled after the check above.
-    const [row] = await db
+    [row] = await db
       .update(showings)
       .set({ startsAt, updatedAt: new Date() })
       .where(and(eq(showings.id, id), eq(showings.status, 'booked')))
       .returning();
-    if (!row) throw new AppError('ALREADY_CANCELLED', 409, 'This showing is cancelled');
-    return row;
   } catch (error) {
     if (isUniqueViolation(error)) throw new AppError('SLOT_TAKEN', 409, 'That slot has just been taken');
     throw error;
   }
+  if (!row) throw new AppError('ALREADY_CANCELLED', 409, 'This showing is cancelled');
+  await notifyProspect('rescheduled', row);
+  return row;
 }
 
 export async function cancelShowing(id: string, now: Date): Promise<Showing> {
@@ -126,6 +131,7 @@ export async function cancelShowing(id: string, now: Date): Promise<Showing> {
     .where(and(eq(showings.id, id), eq(showings.status, 'booked')))
     .returning();
   if (!row) throw new AppError('ALREADY_CANCELLED', 409, 'This showing is cancelled');
+  await notifyProspect('cancelled', row);
   return row;
 }
 
