@@ -1,0 +1,42 @@
+/* Base styles. The layout is a single centred column that works on phones and desktops. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.5;
+  color: #1a1a1a;
+  background: #ffffff;
+}
+
+main {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+/* Available time slots wrap onto new lines on narrow screens. */
+.slot-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Buttons and links are at least 44px high so they are easy to tap. */
+button,
+a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+button {
+  padding: 0 1rem;
+  font: inherit;
+  cursor: pointer;
+}
