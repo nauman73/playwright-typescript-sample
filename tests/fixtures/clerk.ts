@@ -7,6 +7,14 @@ const MAX_ATTEMPTS = 4;
 /** The longest wait before a retry. Three waits stay well under the 30-second fixture timeout. */
 const MAX_DELAY_MS = 2_000;
 
+/**
+ * The largest difference allowed between the local clock and Clerk's servers. It matches Clerk's
+ * default tolerance: Clerk rejects a session token issued more than 5 seconds in the future.
+ */
+const MAX_CLOCK_OFFSET_MS = 5_000;
+/** The clock check waits this long for Clerk to answer. */
+const CLOCK_CHECK_TIMEOUT_MS = 10_000;
+
 /** Global setup stores the id of the run's Clerk session in this environment variable. */
 export const SESSION_ID_ENV = 'E2E_CLERK_SESSION_ID';
 
@@ -19,6 +27,39 @@ export type ClerkSession = {
 
 export function clerkClient(): ClerkClient {
   return createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY! });
+}
+
+/**
+ * Throws when the local clock differs from Clerk's servers by more than 5 seconds. With a wrong
+ * clock, Clerk rejects the session tokens and sign-in fails with an error about the instance keys,
+ * so global setup checks the clock first. The reference time is the Date header of one request to
+ * the Backend API. The request needs no key, and Clerk sends the header with its 401 response. The
+ * header has one-second resolution, which is enough for a 5-second limit.
+ */
+export async function assertClockInSync(): Promise<void> {
+  let serverTime: number;
+  const sentAt = Date.now();
+  try {
+    const res = await fetch('https://api.clerk.com/v1/', {
+      method: 'HEAD',
+      signal: AbortSignal.timeout(CLOCK_CHECK_TIMEOUT_MS),
+    });
+    serverTime = Date.parse(res.headers.get('date') ?? '');
+    if (Number.isNaN(serverTime)) throw new Error('the response has no valid Date header');
+  } catch (error) {
+    throw new Error(`Could not reach Clerk to check the system clock: ${(error as Error).message}`);
+  }
+  const receivedAt = Date.now();
+  // A negative offset means that the local clock is behind.
+  const offsetMs = (sentAt + receivedAt) / 2 - serverTime;
+  if (Math.abs(offsetMs) <= MAX_CLOCK_OFFSET_MS) return;
+  const seconds = (Math.abs(offsetMs) / 1000).toFixed(1);
+  const direction = offsetMs < 0 ? 'behind' : 'ahead of';
+  throw new Error(
+    `The system clock is ${seconds} s ${direction} Clerk's servers. Clerk rejects session tokens ` +
+      `when the clock is off by more than ${MAX_CLOCK_OFFSET_MS / 1000} s. Sync the system clock ` +
+      '(on Windows: w32tm /resync) and run the tests again.',
+  );
 }
 
 /**

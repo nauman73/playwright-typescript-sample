@@ -1,6 +1,6 @@
 import { readFile, stat } from 'node:fs/promises';
 import { clerkSetup } from '@clerk/testing/playwright';
-import { SESSION_ID_ENV, clerkClient, createTestSession, revokeTestSession } from './fixtures/clerk';
+import { SESSION_ID_ENV, assertClockInSync, clerkClient, createTestSession, revokeTestSession } from './fixtures/clerk';
 import { STAFF_STATE } from './support/constants';
 
 /**
@@ -26,6 +26,9 @@ async function savedStateSessionId(runStartedAt: number): Promise<string | null>
 
 export default async function globalSetup() {
   const runStartedAt = Date.now();
+  // Clerk rejects session tokens when the clock is wrong, so the clock is checked before any
+  // Clerk call.
+  await assertClockInSync();
   // playwright.config.ts has already loaded the environment files.
   await clerkSetup({ publishableKey: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY, dotenv: false });
 
