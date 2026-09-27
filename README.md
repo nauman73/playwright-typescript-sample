@@ -192,6 +192,42 @@ field, and with route 1,
    Run `pnpm db:seed` once. Each run adds the three demo properties again. The tests do not need
    the demo data, because each test creates its own property.
 
+### Open the app from another machine
+
+The development server listens on every network interface, so a phone or another computer on the
+same network can open it, for example at `http://192.168.1.20:3000`. `next dev` accepts its own
+development resources, such as the live-reload connection, only from `localhost` and from the
+hosts in `allowedDevOrigins` ([next.config.ts](next.config.ts)). From any other host the page
+loads, but Clerk's sign-in form does not appear.
+
+1. Add this machine's IP address or hostname to `.env`. Write the host only, without `http://` or
+   a port. The entry must match the host that the other machine's browser shows in its address
+   bar, so list both the IP address and the hostname if you use both. Separate several hosts with
+   commas:
+
+   ```bash
+   DEV_ALLOWED_ORIGINS=192.168.1.20,devbox.local
+   ```
+
+   Next.js also accepts a wildcard for one part of a host, such as `192.168.1.*`. Exact hosts are
+   easier to reason about.
+
+2. Restart `pnpm dev`. Next.js reads the setting only when the server starts.
+3. On the other machine, open `http://<host>:3000` and sign in with the Clerk test user.
+
+The same setting applies to `pnpm dev --experimental-https`. That command serves the app over HTTPS
+with a self-signed certificate, which the other machine's browser asks you to accept. It writes the
+certificate and its private key to `certificates/`, which is gitignored. The app does not need
+HTTPS on the local network.
+
+> [!IMPORTANT]
+> After you switch the same host from HTTPS back to HTTP, clear that site's cookies in the
+> browser. Clerk's cookies from the HTTPS session stay in the browser, and sign-in over HTTP then
+> fails.
+
+`pnpm start` (the production server) has no such check, so a production build opens from another
+machine without this setting.
+
 4. Start the development server:
 
    ```bash
