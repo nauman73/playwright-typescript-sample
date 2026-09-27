@@ -110,7 +110,9 @@ reschedule, rescheduling to a taken slot (`409 SLOT_TAKEN`), rescheduling or can
 that has started (`422 SHOWING_STARTED`), changing a cancelled showing (`409 ALREADY_CANCELLED`),
 invalid input (`400 VALIDATION`) and unknown showing ids (`404`).
 [tests/ui/reschedule-cancel.spec.ts](tests/ui/reschedule-cancel.spec.ts) reschedules and cancels a
-showing through the pages.
+showing through the pages. [tests/ui/not-found.spec.ts](tests/ui/not-found.spec.ts) checks that the
+property, booking and showing pages answer `404` with the not-found page for an unknown or
+non-UUID id.
 
 **Test clock enabled in production.**
 [src/instrumentation.ts](src/instrumentation.ts) stops the server at startup when
