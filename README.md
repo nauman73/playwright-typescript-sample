@@ -228,6 +228,21 @@ HTTPS on the local network.
 `pnpm start` (the production server) has no such check, so a production build opens from another
 machine without this setting.
 
+### Sign-in returns to the sign-in page
+
+If sign-in returns to the sign-in page and the server log shows "Clock skew detected" or "JWT
+issued at date claim (iat) is in the future", the system clock is wrong. Clerk rejects a session
+token that was issued more than 5 seconds in the future. The same log may also say "infinite
+redirect loop" and that the instance keys do not match. When that message comes with the
+clock-skew warning, the clock is the cause, not the keys.
+
+1. Sync the system clock. On Windows, run `w32tm /resync`, or open
+   **Settings > Time & language > Date & time** and select **Sync now**. If Sync now does not
+   finish, the Windows Time service may have to be registered again.
+2. Clear the cookies for `localhost` in the browser. Browsers store cookies per host, not per
+   port.
+3. Restart the server.
+
 ## 6. Run the tests
 
 Install Playwright's Chromium once, then run the whole suite:
@@ -290,6 +305,10 @@ The report also opens a test's trace from its page.
   Download it, unzip it and run `pnpm exec playwright show-report <folder>`.
 - `test-results`: traces and screenshots. It is uploaded when the run fails. Open a trace with
   `pnpm exec playwright show-trace <path to trace.zip>`.
+
+**A clock error in global setup.** If the run stops with "The system clock is … Clerk's servers",
+sync the system clock and run the tests again. See
+[Sign-in returns to the sign-in page](#sign-in-returns-to-the-sign-in-page).
 
 To report a bug in the app, use the template in
 [.github/ISSUE_TEMPLATE/bug_report.md](.github/ISSUE_TEMPLATE/bug_report.md) and attach the

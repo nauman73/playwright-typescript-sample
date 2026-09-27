@@ -226,6 +226,13 @@ projects that depend on it (`api`, `desktop-chrome` and `mobile-chrome`); `sms-c
 call the app and still runs. Section 10 of the [README](README.md) lists the variables for a run
 against staging.
 
+The system clock of the machine that runs the suite must be within 5 seconds of the real time.
+Clerk rejects a session token that was issued more than 5 seconds in the future, and sign-in then
+fails. Global setup checks the clock against Clerk's servers and stops the run when it is off by
+more than 5 seconds. For a local or CI run, the app runs on the same machine, so the check covers
+it too. For a run against staging, the staging server's clock is not checked and must also be kept
+in sync.
+
 ## 6. Reporting bugs
 
 Report bugs as GitHub issues with the template in
