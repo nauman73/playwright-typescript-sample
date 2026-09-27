@@ -102,7 +102,7 @@ tests/
 | Node.js | 24 LTS (minimum 20.9) | `node --version` |
 | pnpm | 10.x | `pnpm --version` |
 | Git | 2.40+ | `git --version` |
-| PostgreSQL 16 and Mailpit | Through Docker (route 1) or native installs (route 2), see [Services](#services) | see [Services](#services) |
+| Docker | Docker Desktop, or Docker Engine with the Compose plugin on Linux. Runs PostgreSQL 16 and Mailpit, see [Services](#services) | `docker compose version` |
 
 1. Install Node 24 LTS from nodejs.org if it is missing.
 2. Install pnpm with `npm install -g pnpm@10`.
@@ -145,30 +145,15 @@ A fork or copy of this repository needs six repository secrets for CI. They are 
 ### Services
 
 The app needs PostgreSQL on port 5432, with user, password and database all named `viewings`, and
-Mailpit on ports 1025 (SMTP) and 8025 (web interface and API). Choose one route.
+Mailpit on ports 1025 (SMTP) and 8025 (web interface and API). Docker runs both.
 
-**Route 1: Docker (matches CI)**
-
-1. Install Docker Desktop. On Windows it needs WSL 2 and administrator rights.
+1. Install Docker Desktop, or Docker Engine with the Compose plugin on Linux. On Windows, Docker
+   Desktop needs WSL 2 and administrator rights.
 2. Run `docker compose up -d` in the repository folder. [docker-compose.yml](docker-compose.yml)
    uses the same image tags as the CI workflow (`postgres:16` and `axllent/mailpit:v1.31`).
 
-**Route 2: native installs (no Docker)**
-
-1. Install PostgreSQL 16 (Windows: the EDB installer; macOS: `brew install postgresql@16`; Linux:
-   the distribution package). Then create the role and the database:
-
-   ```bash
-   psql -U postgres -c "CREATE ROLE viewings LOGIN PASSWORD 'viewings';"
-   psql -U postgres -c "CREATE DATABASE viewings OWNER viewings;"
-   ```
-
-2. Download the Mailpit binary for your OS from its GitHub releases page, unpack it, and run
-   `mailpit` (Windows: `mailpit.exe`). It listens on ports 1025 and 8025 by default.
-
 To check the services, `curl -s http://localhost:8025/api/v1/info` prints JSON with a `Version`
-field, and with route 1,
-`docker compose exec postgres psql -U viewings -c "select 1"` prints one row.
+field, and `docker compose exec postgres psql -U viewings -c "select 1"` prints one row.
 
 ## 5. Run the app
 
@@ -191,6 +176,21 @@ field, and with route 1,
 
    Run `pnpm db:seed` once. Each run adds the three demo properties again. The tests do not need
    the demo data, because each test creates its own property.
+
+4. Start the development server:
+
+   ```bash
+   pnpm dev
+   ```
+
+5. Open `http://localhost:3000` and sign in with the Clerk test user. If Clerk asks for a
+   verification code, enter `424242`.
+
+Every email the app sends arrives in Mailpit's inbox at `http://localhost:8025`. No email leaves
+the machine.
+
+By default the app records SMS messages instead of sending them. To see them, run
+`pnpm db:studio` and open the `sms_outbox` table.
 
 ### Open the app from another machine
 
@@ -227,21 +227,6 @@ HTTPS on the local network.
 
 `pnpm start` (the production server) has no such check, so a production build opens from another
 machine without this setting.
-
-4. Start the development server:
-
-   ```bash
-   pnpm dev
-   ```
-
-5. Open `http://localhost:3000` and sign in with the Clerk test user. If Clerk asks for a
-   verification code, enter `424242`.
-
-Every email the app sends arrives in Mailpit's inbox at `http://localhost:8025`. No email leaves
-the machine.
-
-By default the app records SMS messages instead of sending them. To see them, run
-`pnpm db:studio` and open the `sms_outbox` table.
 
 ## 6. Run the tests
 
